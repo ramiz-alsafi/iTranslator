@@ -1,0 +1,49 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios
+
+      - name: Install CocoaPods
+        run: cd ios && pod install
+
+      - name: Build unsigned archive
+        run: |
+          xcodebuild archive \
+            -workspace ios/iTranslator.xcworkspace \
+            -scheme iTranslator \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/iTranslator.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/iTranslator.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r iTranslator-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iTranslator-unsigned-ipa
+          path: build/iTranslator-unsigned.ipa
