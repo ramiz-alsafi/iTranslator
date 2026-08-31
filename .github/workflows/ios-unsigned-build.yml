@@ -7,6 +7,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+      - name: List available Xcode versions
+        run: ls /Applications | grep Xcode
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
