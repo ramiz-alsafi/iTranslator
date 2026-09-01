@@ -1,0 +1,8 @@
+{
+  "name": "live-translate",
+  "version": "1.0.0",
+  "description": "Local Expo module: on-device speech recognition + Apple Translation framework",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "MIT"
+}
