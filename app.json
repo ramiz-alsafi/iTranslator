@@ -8,7 +8,6 @@
     "scheme": "itranslator",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.ramizalsafi.itranslator",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "iTranslator needs microphone access to listen to audio and provide live translated captions."
