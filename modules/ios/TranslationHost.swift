@@ -2,6 +2,12 @@ import SwiftUI
 import Translation
 import UIKit
 
+enum LanguagePackStatus: String {
+  case installed
+  case supported
+  case unsupported
+}
+
 /// The Translation framework only vends a `TranslationSession` through the SwiftUI
 /// `.translationTask` modifier — there's no way to construct one directly. This hosts a
 /// hidden, zero-size SwiftUI view in the app's key window purely to obtain a session and
@@ -11,10 +17,36 @@ final class TranslationHost {
   private var hostingController: UIHostingController<TranslationHostView>?
   private let viewModel = TranslationHostViewModel()
 
+  /// Checks whether a language pair is installed / downloadable / unsupported, without
+  /// mounting the SwiftUI host or triggering any UI.
+  func checkAvailability(sourceLocale: String, targetLocale: String) async -> LanguagePackStatus {
+    let availability = LanguageAvailability()
+    let status = await availability.status(
+      from: Locale.Language(identifier: sourceLocale),
+      to: Locale.Language(identifier: targetLocale)
+    )
+    switch status {
+    case .installed: return .installed
+    case .supported: return .supported
+    case .unsupported: return .unsupported
+    @unknown default: return .unsupported
+    }
+  }
+
+  /// Presents Apple's system sheet asking the user's permission to download the on-device
+  /// language pack for this pair. Resolves once the user has responded to that sheet (the
+  /// actual download continues in the background — re-check `checkAvailability` afterward).
+  func prepareDownload(sourceLocale: String, targetLocale: String) async throws {
+    await mount()
+    try await viewModel.prepareDownload(
+      source: Locale.Language(identifier: sourceLocale),
+      target: Locale.Language(identifier: targetLocale)
+    )
+  }
+
   /// Translates `text` from `sourceLocale` to `targetLocale` (BCP-47, e.g. "en-US").
-  /// NOTE: the on-device language pack for this pair must already be downloaded, or this
-  /// will throw. Use `LanguageAvailability` to check/prompt for downloads ahead of time —
-  /// left as a TODO here since it needs its own UI flow.
+  /// Throws if the language pack isn't installed yet — call `checkAvailability` /
+  /// `prepareDownload` first.
   func translate(_ text: String, sourceLocale: String, targetLocale: String) async throws -> String {
     await mount()
     return try await viewModel.translate(
@@ -52,28 +84,46 @@ final class TranslationHost {
 private final class TranslationHostViewModel: ObservableObject {
   @Published fileprivate var configuration: TranslationSession.Configuration?
 
-  private var pendingText: String?
-  private var pendingContinuation: CheckedContinuation<String, Error>?
+  private enum PendingWork {
+    case translate(text: String, continuation: CheckedContinuation<String, Error>)
+    case download(continuation: CheckedContinuation<Void, Error>)
+  }
+  private var pending: PendingWork?
 
   func translate(_ text: String, source: Locale.Language, target: Locale.Language) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
-      self.pendingText = text
-      self.pendingContinuation = continuation
+      self.pending = .translate(text: text, continuation: continuation)
       // Constructing a fresh Configuration re-triggers .translationTask below, even if the
       // source/target pair hasn't changed.
       self.configuration = TranslationSession.Configuration(source: source, target: target)
     }
   }
 
+  func prepareDownload(source: Locale.Language, target: Locale.Language) async throws {
+    try await withCheckedThrowingContinuation { continuation in
+      self.pending = .download(continuation: continuation)
+      self.configuration = TranslationSession.Configuration(source: source, target: target)
+    }
+  }
+
   func handle(session: TranslationSession) async {
-    guard let text = pendingText, let continuation = pendingContinuation else { return }
-    pendingText = nil
-    pendingContinuation = nil
-    do {
-      let response = try await session.translate(text)
-      continuation.resume(returning: response.targetText)
-    } catch {
-      continuation.resume(throwing: error)
+    guard let work = pending else { return }
+    pending = nil
+    switch work {
+    case .translate(let text, let continuation):
+      do {
+        let response = try await session.translate(text)
+        continuation.resume(returning: response.targetText)
+      } catch {
+        continuation.resume(throwing: error)
+      }
+    case .download(let continuation):
+      do {
+        try await session.prepareTranslation()
+        continuation.resume(returning: ())
+      } catch {
+        continuation.resume(throwing: error)
+      }
     }
   }
 }

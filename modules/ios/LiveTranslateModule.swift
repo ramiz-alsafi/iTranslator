@@ -13,6 +13,18 @@ public class LiveTranslateModule: Module {
       try await self.speech.requestAuthorization()
     }
 
+    AsyncFunction("checkLanguageAvailability") { (sourceLocale: String, targetLocale: String) -> String in
+      guard #available(iOS 17.4, *) else { return "unsupported" }
+      return await self.host().checkAvailability(sourceLocale: sourceLocale, targetLocale: targetLocale).rawValue
+    }
+
+    AsyncFunction("prepareLanguageDownload") { (sourceLocale: String, targetLocale: String) in
+      guard #available(iOS 17.4, *) else {
+        throw Exception(name: "Unsupported", description: "Translation requires iOS 17.4+")
+      }
+      try await self.host().prepareDownload(sourceLocale: sourceLocale, targetLocale: targetLocale)
+    }
+
     AsyncFunction("startListening") { (sourceLocale: String, targetLocale: String) in
       try self.speech.start(localeIdentifier: sourceLocale) { [weak self] event in
         guard let self else { return }
@@ -39,23 +51,25 @@ public class LiveTranslateModule: Module {
     }
   }
 
+  @available(iOS 17.4, *)
+  private func host() -> TranslationHost {
+    if let existing = translationHost as? TranslationHost {
+      return existing
+    }
+    let host = TranslationHost()
+    translationHost = host
+    return host
+  }
+
   private func translate(_ text: String, from sourceLocale: String, to targetLocale: String) {
     guard #available(iOS 17.4, *) else {
       sendEvent("onError", ["message": "Translation requires iOS 17.4+"])
       return
     }
 
-    let host: TranslationHost
-    if let existing = translationHost as? TranslationHost {
-      host = existing
-    } else {
-      host = TranslationHost()
-      translationHost = host
-    }
-
     Task {
       do {
-        let translated = try await host.translate(text, sourceLocale: sourceLocale, targetLocale: targetLocale)
+        let translated = try await self.host().translate(text, sourceLocale: sourceLocale, targetLocale: targetLocale)
         self.sendEvent("onTranslated", ["original": text, "translated": translated])
       } catch {
         self.sendEvent("onError", ["message": error.localizedDescription])
