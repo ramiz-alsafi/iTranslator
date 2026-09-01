@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# iTranslator
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Status: Under development
+Platform: iOS
 
-## Get started
+iTranslator is currently under active development.
 
-1. Install dependencies
+iTranslator is a free, lightweight iOS translation app that runs entirely on your device. It processes translations in real time without relying on external servers, an internet connection, or cloud APIs.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## Requirements
 
-   ```bash
-   npx expo start
-   ```
+### To run the app on your phone
 
-In the output, you'll find options to open the app in a
+* Device: iPhone 11 or newer (needs the A13 Bionic chip or a newer chip for local processing)
+* Account: a standard, free Apple ID (a paid Apple Developer account is not required)
+* Setup: a Mac or PC for the initial sideload process
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### To build the app from source
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+* npm (Node.js environment)
+* Tailscale, used as a network bridge between remote environments and local devices
+* iTunes or the Apple Devices app, required for iOS connection drivers
+* Sideloadly, required to sideload the generated .ipa file onto iOS
+* An iPhone with Developer Mode enabled (Settings > Privacy & Security > Developer Mode)
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## Building from Source
+
+### 1. Clone and install
 
 ```bash
-npm run reset-project
+git clone https://github.com/ramiz-alsafi/iTranslator.git
+cd iTranslator
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Once the build completes, you will have an `iTranslator.ipa` file ready to sideload using the steps below.
 
-### Other setup steps
+### Running in development mode (Windows)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+To start the app in development mode on Windows, run:
 
-## Learn more
+```bash
+npx expo start --dev-client
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+This starts the Expo development server. Keep your iPhone connected to the same network as your Windows machine (or connected through Tailscale) and open the app on your device to connect to the development server.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## Installing the App
 
-Join our community of developers creating universal apps.
+Since iTranslator is completely local and does not require a paid developer account, you can sideload it onto your iPhone using tools such as Sideloadly or AltStore.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Step 1: Get the app
+
+Download the latest `iTranslator.ipa` file from the Releases page to your computer, or build it yourself from source as shown above.
+
+### Step 2: Sideload with Sideloadly
+
+1. Download and install Sideloadly on your PC or Mac.
+2. Connect your iPhone to your computer with a USB cable and select Trust if prompted.
+3. Open Sideloadly and drag the `iTranslator.ipa` file into the Sideloadly window.
+4. Enter your standard, free Apple ID in the Apple account field. This is sent to Apple only to sign the app for your specific device.
+5. Click Start and wait for the progress bar to finish and show Done.
+
+### Step 3: Trust the app on your iPhone
+
+1. On your iPhone, go to Settings > General > VPN & Device Management.
+2. Under the Developer App section, tap your Apple ID.
+3. Tap Trust to allow the app to run.
+4. On iOS 16 and later, go to Settings > Privacy & Security, scroll down to Developer Mode, turn it on, and restart your phone.
+
+Free Apple IDs require sideloaded apps to be refreshed every 7 days. You can set Sideloadly or AltStore to refresh the app wirelessly over your local Wi Fi before it expires.
