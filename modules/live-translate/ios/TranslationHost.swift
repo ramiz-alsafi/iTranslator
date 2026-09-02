@@ -80,8 +80,13 @@ final class TranslationHost {
     controller.view.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
     controller.view.alpha = 0.01
 
+    // `addChild(controller)` registers `controller` as rootVC's child VC, so its view must
+    // actually live inside `rootVC.view`'s subtree to match. Adding it to `window` directly
+    // instead makes the view-controller hierarchy and the view hierarchy disagree — UIKit
+    // detects that mismatch in `_associatedViewControllerForwardsAppearanceCallbacks:` and
+    // raises an NSException the moment the view is inserted, which crashes the app (SIGABRT).
     rootVC.addChild(controller)
-    window.addSubview(controller.view)
+    rootVC.view.addSubview(controller.view)
     controller.didMove(toParent: rootVC)
     hostingController = controller
   }
