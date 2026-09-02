@@ -39,6 +39,12 @@ npm install
 
 Once the build completes, you will have an `iTranslator.ipa` file ready to sideload using the steps below.
 
+### Note on the GitHub Actions workflow
+
+This repository is public, so any signed in GitHub user can view the Actions tab and download artifacts from a workflow run, even without write access to the repo.
+
+Running the workflow does not produce a verified or signed `.ipa`. The `.ipa` built through Actions is unsigned, and you still need to sign it for your own device using Sideloadly (or a similar tool) with your own Apple ID, as described in the steps below.
+
 ### Running in development mode (Windows)
 
 To start the app in development mode on Windows, run:
