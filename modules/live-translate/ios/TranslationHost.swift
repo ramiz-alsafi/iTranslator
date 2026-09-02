@@ -60,9 +60,8 @@ final class TranslationHost {
   private func mount() {
     guard hostingController == nil else { return }
     let controller = UIHostingController(rootView: TranslationHostView(viewModel: viewModel))
-    controller.view.frame = .zero
-    controller.view.isHidden = true
     controller.view.backgroundColor = .clear
+    controller.view.isUserInteractionEnabled = false
 
     guard
       let windowScene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
@@ -71,6 +70,15 @@ final class TranslationHost {
     else {
       return
     }
+
+    // A `.zero`-frame or `isHidden` hosting controller view gets skipped by UIKit's layout
+    // pass on-device, which means the SwiftUI subtree never actually renders — and
+    // `.translationTask` never fires. That leaves `prepareDownload`/`translate` awaiting a
+    // continuation that's never resumed, so the JS promise just hangs forever with no error.
+    // Give it a real (tiny) frame and hide it visually with alpha instead, so it still gets
+    // laid out and its SwiftUI lifecycle actually runs.
+    controller.view.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+    controller.view.alpha = 0.01
 
     rootVC.addChild(controller)
     window.addSubview(controller.view)
