@@ -41,7 +41,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "17.4"
+            "deploymentTarget": "18.0"
           }
         }
       ]

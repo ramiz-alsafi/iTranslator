@@ -12,7 +12,8 @@ enum LanguagePackStatus: String {
 /// `.translationTask` modifier — there's no way to construct one directly. This hosts a
 /// hidden, zero-size SwiftUI view in the app's key window purely to obtain a session and
 /// bridge it back into plain async/await for the rest of the (UIKit-based) module.
-@available(iOS 17.4, *)
+@available(iOS 18.0, *)
+@MainActor
 final class TranslationHost {
   private var hostingController: UIHostingController<TranslationHostView>?
   private let viewModel = TranslationHostViewModel()
@@ -37,7 +38,7 @@ final class TranslationHost {
   /// language pack for this pair. Resolves once the user has responded to that sheet (the
   /// actual download continues in the background — re-check `checkAvailability` afterward).
   func prepareDownload(sourceLocale: String, targetLocale: String) async throws {
-    await mount()
+    mount()
     try await viewModel.prepareDownload(
       source: Locale.Language(identifier: sourceLocale),
       target: Locale.Language(identifier: targetLocale)
@@ -48,7 +49,7 @@ final class TranslationHost {
   /// Throws if the language pack isn't installed yet — call `checkAvailability` /
   /// `prepareDownload` first.
   func translate(_ text: String, sourceLocale: String, targetLocale: String) async throws -> String {
-    await mount()
+    mount()
     return try await viewModel.translate(
       text,
       source: Locale.Language(identifier: sourceLocale),
@@ -56,7 +57,6 @@ final class TranslationHost {
     )
   }
 
-  @MainActor
   private func mount() {
     guard hostingController == nil else { return }
     let controller = UIHostingController(rootView: TranslationHostView(viewModel: viewModel))
@@ -79,7 +79,7 @@ final class TranslationHost {
   }
 }
 
-@available(iOS 17.4, *)
+@available(iOS 18.0, *)
 @MainActor
 private final class TranslationHostViewModel: ObservableObject {
   @Published fileprivate var configuration: TranslationSession.Configuration?
@@ -128,7 +128,7 @@ private final class TranslationHostViewModel: ObservableObject {
   }
 }
 
-@available(iOS 17.4, *)
+@available(iOS 18.0, *)
 struct TranslationHostView: View {
   @ObservedObject fileprivate var viewModel: TranslationHostViewModel
 
