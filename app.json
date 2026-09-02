@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.ramizalsafi.itranslator",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "iTranslator needs microphone access to listen to audio and provide live translated captions.",
-        "NSSpeechRecognitionUsageDescription": "iTranslator needs speech recognition to transcribe what you say."
+        "NSSpeechRecognitionUsageDescription": "iTranslator needs speech recognition to transcribe what you say.",
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {

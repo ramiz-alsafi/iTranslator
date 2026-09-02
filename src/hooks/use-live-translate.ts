@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
-import LiveTranslate, { type LanguagePackStatus } from '../../modules/live-translate';
+import LiveTranslate, { PipCaption, type LanguagePackStatus } from '../../modules/live-translate';
 
 export type TranslationEntry = {
   id: string;
@@ -17,6 +18,22 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
 
   const [languageStatus, setLanguageStatus] = useState<LanguagePackStatus | 'checking'>('checking');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isFloating, setIsFloating] = useState(false);
+  const pipSupported = Platform.OS === 'ios' && PipCaption.isSupported();
+
+  // Ask for mic + speech recognition permission as soon as the screen mounts.
+  // Calling this again later (e.g. in `start`) is safe — iOS just returns the
+  // already-decided status instead of showing a second prompt.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    LiveTranslate.requestPermissions()
+      .then(setHasPermission)
+      .catch((err) => {
+        setHasPermission(false);
+        setError(err instanceof Error ? err.message : String(err));
+      });
+  }, []);
 
   useEffect(() => {
     const subscriptions = [
@@ -29,6 +46,7 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
       }),
       LiveTranslate.addListener('onTranslated', ({ original, translated }) => {
         setHistory((prev) => [{ id: `${Date.now()}`, original, translated }, ...prev]);
+        PipCaption.updateCaption(original, translated);
       }),
       LiveTranslate.addListener('onError', ({ message }) => {
         setError(message);
@@ -83,9 +101,10 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
     setError(null);
     setIsStarting(true);
     try {
-      const granted = await LiveTranslate.requestPermissions();
+      const granted = hasPermission ?? (await LiveTranslate.requestPermissions());
+      setHasPermission(granted);
       if (!granted) {
-        setError('Microphone or speech recognition permission was denied.');
+        setError('Microphone or speech access is off. Enable it in Settings > iTranslator.');
         return;
       }
       await LiveTranslate.startListening(sourceLocale, targetLocale);
@@ -95,7 +114,7 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
     } finally {
       setIsStarting(false);
     }
-  }, [sourceLocale, targetLocale]);
+  }, [sourceLocale, targetLocale, hasPermission]);
 
   const stop = useCallback(async () => {
     await LiveTranslate.stopListening();
@@ -110,6 +129,20 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
       start();
     }
   }, [isListening, start, stop]);
+
+  const toggleFloating = useCallback(async () => {
+    try {
+      if (isFloating) {
+        await PipCaption.stop();
+        setIsFloating(false);
+      } else {
+        await PipCaption.start();
+        setIsFloating(true);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [isFloating]);
 
   useEffect(() => {
     return () => {
@@ -130,5 +163,9 @@ export function useLiveTranslate(sourceLocale: string, targetLocale: string) {
     languageStatus,
     isDownloading,
     downloadLanguagePack,
+    hasPermission,
+    isFloating,
+    toggleFloating,
+    pipSupported,
   };
 }

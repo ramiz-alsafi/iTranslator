@@ -56,3 +56,31 @@ function createUnsupportedStub(): LiveTranslateModule {
 export default Platform.OS === 'ios'
   ? requireNativeModule<LiveTranslateModule>('LiveTranslate')
   : createUnsupportedStub();
+
+// --- Floating (Picture-in-Picture) captions ---
+// Uses AVPictureInPictureController + AVSampleBufferDisplayLayer to render live captions in a
+// real system-wide floating window. See ios/PipCaptionRenderer.swift for the "why" and caveats.
+
+declare class PipCaptionNativeModule extends NativeModule {
+  isSupported(): boolean;
+  isActive(): boolean;
+  /** Push new caption text into the floating window. Cheap to call on every partial update. */
+  updateCaption(original: string, translated: string): void;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
+function createPipUnsupportedStub(): PipCaptionNativeModule {
+  return {
+    isSupported: () => false,
+    isActive: () => false,
+    updateCaption: () => {},
+    start: async () => {},
+    stop: async () => {},
+  } as unknown as PipCaptionNativeModule;
+}
+
+export const PipCaption =
+  Platform.OS === 'ios'
+    ? requireNativeModule<PipCaptionNativeModule>('PipCaption')
+    : createPipUnsupportedStub();

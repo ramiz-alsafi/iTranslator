@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LanguagePicker } from '@/components/language-picker';
@@ -28,13 +28,23 @@ export default function HomeScreen() {
     languageStatus,
     isDownloading,
     downloadLanguagePack,
+    hasPermission,
+    isFloating,
+    toggleFloating,
+    pipSupported,
   } = useLiveTranslate(sourceLocale, targetLocale);
 
   const unsupported = Platform.OS !== 'ios';
+  const permissionDenied = hasPermission === false;
   const needsDownload = languageStatus === 'supported';
   const packUnsupported = languageStatus === 'unsupported';
   const micDisabled =
-    unsupported || isStarting || needsDownload || packUnsupported || languageStatus === 'checking';
+    unsupported ||
+    isStarting ||
+    needsDownload ||
+    packUnsupported ||
+    languageStatus === 'checking' ||
+    permissionDenied;
 
   return (
     <ThemedView style={styles.root}>
@@ -60,6 +70,21 @@ export default function HomeScreen() {
           </ThemedView>
         ) : (
           <>
+            {permissionDenied && (
+              <Pressable
+                onPress={() => Linking.openSettings()}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedView type="backgroundElement" style={styles.downloadBanner}>
+                  <SymbolView
+                    tintColor={theme.text}
+                    name={{ ios: 'mic.slash', android: 'mic-off', web: 'mic-off' }}
+                    size={18}
+                  />
+                  <ThemedText type="smallBold">Mic & speech access is off — tap to open Settings</ThemedText>
+                </ThemedView>
+              </Pressable>
+            )}
+
             {needsDownload && (
               <Pressable
                 onPress={downloadLanguagePack}
@@ -120,25 +145,49 @@ export default function HomeScreen() {
           </ThemedText>
         )}
 
-        <Pressable
-          onPress={toggle}
-          disabled={micDisabled}
-          style={({ pressed }) => [
-            styles.micButton,
-            { backgroundColor: isListening ? RECORDING_COLOR : theme.backgroundElement },
-            micDisabled && styles.micDisabled,
-            pressed && styles.pressed,
-          ]}>
-          <SymbolView
-            tintColor={isListening ? '#ffffff' : theme.text}
-            name={{
-              ios: isListening ? 'mic.fill' : 'mic',
-              android: isListening ? 'mic' : 'mic-none',
-              web: 'mic',
-            }}
-            size={28}
-          />
-        </Pressable>
+        <ThemedView style={styles.controlsRow}>
+          <Pressable
+            onPress={toggle}
+            disabled={micDisabled}
+            style={({ pressed }) => [
+              styles.micButton,
+              { backgroundColor: isListening ? RECORDING_COLOR : theme.backgroundElement },
+              micDisabled && styles.micDisabled,
+              pressed && styles.pressed,
+            ]}>
+            <SymbolView
+              tintColor={isListening ? '#ffffff' : theme.text}
+              name={{
+                ios: isListening ? 'mic.fill' : 'mic',
+                android: isListening ? 'mic' : 'mic-none',
+                web: 'mic',
+              }}
+              size={28}
+            />
+          </Pressable>
+
+          {pipSupported && (
+            <Pressable
+              onPress={toggleFloating}
+              disabled={!isListening && !isFloating}
+              style={({ pressed }) => [
+                styles.floatButton,
+                { backgroundColor: isFloating ? RECORDING_COLOR : theme.backgroundElement },
+                !isListening && !isFloating && styles.micDisabled,
+                pressed && styles.pressed,
+              ]}>
+              <SymbolView
+                tintColor={isFloating ? '#ffffff' : theme.text}
+                name={{
+                  ios: 'pip',
+                  android: 'picture-in-picture',
+                  web: 'external-link',
+                }}
+                size={20}
+              />
+            </Pressable>
+          )}
+        </ThemedView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -206,11 +255,23 @@ const styles = StyleSheet.create({
   error: {
     textAlign: 'center',
   },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
+  },
   micButton: {
-    alignSelf: 'center',
     width: 72,
     height: 72,
     borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
