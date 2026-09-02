@@ -14,13 +14,13 @@ public class LiveTranslateModule: Module {
     }
 
     AsyncFunction("checkLanguageAvailability") { (sourceLocale: String, targetLocale: String) -> String in
-      guard #available(iOS 17.4, *) else { return "unsupported" }
+      guard #available(iOS 18.0, *) else { return "unsupported" }
       return await self.host().checkAvailability(sourceLocale: sourceLocale, targetLocale: targetLocale).rawValue
     }
 
     AsyncFunction("prepareLanguageDownload") { (sourceLocale: String, targetLocale: String) in
-      guard #available(iOS 17.4, *) else {
-        throw Exception(name: "Unsupported", description: "Translation requires iOS 17.4+")
+      guard #available(iOS 18.0, *) else {
+        throw Exception(name: "Unsupported", description: "Translation requires iOS 18.0+")
       }
       try await self.host().prepareDownload(sourceLocale: sourceLocale, targetLocale: targetLocale)
     }
@@ -51,7 +51,8 @@ public class LiveTranslateModule: Module {
     }
   }
 
-  @available(iOS 17.4, *)
+  @available(iOS 18.0, *)
+  @MainActor
   private func host() -> TranslationHost {
     if let existing = translationHost as? TranslationHost {
       return existing
@@ -62,8 +63,8 @@ public class LiveTranslateModule: Module {
   }
 
   private func translate(_ text: String, from sourceLocale: String, to targetLocale: String) {
-    guard #available(iOS 17.4, *) else {
-      sendEvent("onError", ["message": "Translation requires iOS 17.4+"])
+    guard #available(iOS 18.0, *) else {
+      sendEvent("onError", ["message": "Translation requires iOS 18.0+"])
       return
     }
 
