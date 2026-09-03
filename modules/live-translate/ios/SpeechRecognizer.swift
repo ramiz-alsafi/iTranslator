@@ -14,6 +14,14 @@ final class SpeechRecognizer {
   private var task: SFSpeechRecognitionTask?
   private let audioEngine = AVAudioEngine()
 
+  // All engine start/stop work happens on this serial queue. Without this, two
+  // overlapping calls to start() (e.g. a fast double-tap on the mic button, or a
+  // JS-side re-render firing the handler twice before state updates) can race:
+  // both see "no tap installed yet" from stop(), then both call installTap(onBus: 0),
+  // and the second one crashes because the first already claimed that bus. Serializing
+  // here means the second call always waits for the first to fully finish first.
+  private let engineQueue = DispatchQueue(label: "com.itranslator.speechrecognizer.engine")
+
   /// Requests both Speech Recognition and Microphone permission.
   func requestAuthorization() async throws -> Bool {
     let speechStatus = await withCheckedContinuation { (continuation: CheckedContinuation<SFSpeechRecognizerAuthorizationStatus, Never>) in
@@ -28,7 +36,21 @@ final class SpeechRecognizer {
   /// Starts streaming mic audio into the recognizer. Calls `onEvent` for partial/final
   /// transcripts and errors, on an arbitrary background queue.
   func start(localeIdentifier: String, onEvent: @escaping (SpeechEvent) -> Void) throws {
-    stop()
+    try engineQueue.sync {
+      try startLocked(localeIdentifier: localeIdentifier, onEvent: onEvent)
+    }
+  }
+
+  func stop() {
+    engineQueue.sync {
+      stopLocked()
+    }
+  }
+
+  // MARK: - Must only be called while on engineQueue.
+
+  private func startLocked(localeIdentifier: String, onEvent: @escaping (SpeechEvent) -> Void) throws {
+    stopLocked()
 
     guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)),
           recognizer.isAvailable
@@ -70,15 +92,9 @@ final class SpeechRecognizer {
     }
   }
 
-  func stop() {
+  private func stopLocked() {
     audioEngine.stop()
-    // removeTap is safe to call even when no tap is installed (documented no-op) —
-    // don't guard it with `numberOfInputs > 0`: the mic input node always reports
-    // 0 *input* buses (it's a source node, its tap lives on its *output* bus), so
-    // that check was always false and the previous tap was never actually removed.
-    // That left a stale tap installed every time start() was called again, and the
-    // next installTap(onBus: 0, ...) call would crash trying to add a second tap
-    // to the same bus.
+    // removeTap is safe to call even when no tap is installed (documented no-op).
     audioEngine.inputNode.removeTap(onBus: 0)
     request?.endAudio()
     task?.cancel()
