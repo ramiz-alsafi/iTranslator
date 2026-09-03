@@ -22,7 +22,6 @@ final class SpeechRecognizer {
       }
     }
     guard speechStatus == .authorized else { return false }
-
     return await AVAudioApplication.requestRecordPermission()
   }
 
@@ -73,9 +72,14 @@ final class SpeechRecognizer {
 
   func stop() {
     audioEngine.stop()
-    if audioEngine.inputNode.numberOfInputs > 0 {
-      audioEngine.inputNode.removeTap(onBus: 0)
-    }
+    // removeTap is safe to call even when no tap is installed (documented no-op) —
+    // don't guard it with `numberOfInputs > 0`: the mic input node always reports
+    // 0 *input* buses (it's a source node, its tap lives on its *output* bus), so
+    // that check was always false and the previous tap was never actually removed.
+    // That left a stale tap installed every time start() was called again, and the
+    // next installTap(onBus: 0, ...) call would crash trying to add a second tap
+    // to the same bus.
+    audioEngine.inputNode.removeTap(onBus: 0)
     request?.endAudio()
     task?.cancel()
     request = nil
