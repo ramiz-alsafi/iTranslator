@@ -1,0 +1,43 @@
+diff --git a/modules/live-translate/ios/SpeechRecognizer.swift b/modules/live-translate/ios/SpeechRecognizer.swift
+index fab5f4d..435e5ac 100644
+--- a/modules/live-translate/ios/SpeechRecognizer.swift
++++ b/modules/live-translate/ios/SpeechRecognizer.swift
+@@ -7,6 +7,11 @@ enum SpeechEvent {
+   case error(String)
+ }
+ 
++struct SpeechRecognizerError: LocalizedError {
++  let message: String
++  var errorDescription: String? { message }
++}
++
+ /// Wraps SFSpeechRecognizer + AVAudioEngine for continuous, on-device transcription.
+ final class SpeechRecognizer {
+   private var recognizer: SFSpeechRecognizer?
+@@ -55,8 +60,7 @@ final class SpeechRecognizer {
+     guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier)),
+           recognizer.isAvailable
+     else {
+-      onEvent(.error("Speech recognizer unavailable for locale \(localeIdentifier)"))
+-      return
++      throw SpeechRecognizerError(message: "Speech recognizer unavailable for locale \(localeIdentifier)")
+     }
+     self.recognizer = recognizer
+ 
+@@ -82,8 +86,14 @@ final class SpeechRecognizer {
+     let recordingFormat = inputNode.outputFormat(forBus: 0)
+     guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+       stopLocked()
+-      onEvent(.error("Microphone isn't ready yet — try tapping the mic again."))
+-      return
++      // Throwing (not just calling onEvent + return) matters: `start()` is what the JS
++      // `await LiveTranslate.startListening(...)` call is awaiting. If we just return here,
++      // that promise resolves as success and the JS side flips to "listening" state even
++      // though nothing actually started — no crash, but no recording or captions either,
++      // with no visible error unless the caller happens to also be listening for onError.
++      // Throwing makes the awaited call actually reject, which the JS `start()` already
++      // catches and surfaces via setError — and it never sets isListening(true).
++      throw SpeechRecognizerError(message: "Microphone isn't ready yet — try tapping the mic again.")
+     }
+     inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+       request.append(buffer)
