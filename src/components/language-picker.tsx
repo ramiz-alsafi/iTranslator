@@ -33,7 +33,8 @@ export function LanguagePicker({
       <Pressable onPress={onSwap} disabled={disabled} hitSlop={12} style={styles.swapButton}>
         <SymbolView
           tintColor={theme.textSecondary}
-          name={{ ios: 'arrow.left.arrow.right', android: 'swap-horiz', web: 'arrow-left-right' }}
+          name="arrow.left.arrow.right"
+          fallback={<ThemedText type="default">⇄</ThemedText>}
           size={18}
         />
       </Pressable>

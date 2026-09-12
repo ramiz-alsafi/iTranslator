@@ -77,7 +77,8 @@ export default function HomeScreen() {
                 <ThemedView type="backgroundElement" style={styles.downloadBanner}>
                   <SymbolView
                     tintColor={theme.text}
-                    name={{ ios: 'mic.slash', android: 'mic-off', web: 'mic-off' }}
+                    name="mic.slash"
+                    fallback={<ThemedText type="default">🔇</ThemedText>}
                     size={18}
                   />
                   <ThemedText type="smallBold">Mic & speech access is off — tap to open Settings</ThemedText>
@@ -96,7 +97,8 @@ export default function HomeScreen() {
                   ) : (
                     <SymbolView
                       tintColor={theme.text}
-                      name={{ ios: 'arrow.down.circle', android: 'download', web: 'download' }}
+                      name="arrow.down.circle"
+                      fallback={<ThemedText type="default">⬇️</ThemedText>}
                       size={18}
                     />
                   )}
@@ -157,11 +159,8 @@ export default function HomeScreen() {
             ]}>
             <SymbolView
               tintColor={isListening ? '#ffffff' : theme.text}
-              name={{
-                ios: isListening ? 'mic.fill' : 'mic',
-                android: isListening ? 'mic' : 'mic-none',
-                web: 'mic',
-              }}
+              name={isListening ? 'mic.fill' : 'mic'}
+              fallback={<ThemedText type="title">🎤</ThemedText>}
               size={28}
             />
           </Pressable>
@@ -178,11 +177,8 @@ export default function HomeScreen() {
               ]}>
               <SymbolView
                 tintColor={isFloating ? '#ffffff' : theme.text}
-                name={{
-                  ios: 'pip',
-                  android: 'picture-in-picture',
-                  web: 'external-link',
-                }}
+                name="pip"
+                fallback={<ThemedText type="default">🗗</ThemedText>}
                 size={20}
               />
             </Pressable>
