@@ -73,12 +73,22 @@ final class SpeechRecognizer {
     try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
     let inputNode = audioEngine.inputNode
+    // `prepare()` must come before reading the input format. Read too early — e.g. right
+    // after the mic permission prompt resolves, which is exactly when this first runs — and
+    // outputFormat(forBus:) can hand back a placeholder with sampleRate/channelCount of 0.
+    // installTap then throws an *Objective-C* NSException, which Swift's `throws` cannot
+    // catch, so it crashes the whole process (SIGABRT) instead of surfacing as an error here.
+    audioEngine.prepare()
     let recordingFormat = inputNode.outputFormat(forBus: 0)
+    guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+      stopLocked()
+      onEvent(.error("Microphone isn't ready yet — try tapping the mic again."))
+      return
+    }
     inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
       request.append(buffer)
     }
 
-    audioEngine.prepare()
     try audioEngine.start()
 
     task = recognizer.recognitionTask(with: request) { result, error in
